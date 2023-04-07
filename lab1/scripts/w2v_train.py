@@ -1,8 +1,6 @@
 import logging
 import multiprocessing
 import os
-import nltk
-nltk.download('punkt')
 
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
@@ -13,7 +11,6 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
     level=logging.INFO,
 )
-
 
 class W2VLossLogger(CallbackAny2Vec):
     """Callback to print loss after each epoch
@@ -56,14 +53,13 @@ def train_w2v_model(
         epochs (int): How many epochs should the training run
         min_word_count (int): Ignore words that appear less than min_word_count times
     """
-
     workers = multiprocessing.cpu_count()
 
     # TODO: Instantiate gensim.models.Word2Vec class
     model = Word2Vec(sentences=sentences, size=embedding_dim, window=window, min_count=min_word_count, workers=workers)
     # TODO: Build model vocabulary using sentences
     # TODO: Train word2vec model
-    model.train(sentences, total_examples=len(sentences), epochs=1000, callbacks=[W2VLossLogger()])
+    model.train(sentences, total_examples=len(sentences), epochs=epochs, callbacks=[W2VLossLogger()])
     # Save trained model
     model.save(output_file)
 
@@ -72,8 +68,11 @@ def train_w2v_model(
 
 if __name__ == "__main__":
     # read data/gutenberg.txt in the expected format
-    # nltk.corpus.gutenberg.sents is used in order to read sentences not lines.
-    sentences = nltk.corpus.gutenberg.sents('austen-emma.txt')
+    with open('data/gutenberg.txt', 'r') as file:
+        lines = file.readlines()
+
+    sentences = [sentence.split() for sentence in lines]
+    #sentences = nltk.corpus.gutenberg.sents('austen-emma.txt')
     output_file = "gutenberg_w2v.100d.model"
     window = 5
     embedding_dim = 100

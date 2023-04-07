@@ -1,13 +1,18 @@
 import glob
 import os
 import re
+import sys
+from gensim.models import Word2Vec, KeyedVectors
 
 import numpy as np
-import sklearn
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report
+from w2v_train import W2VLossLogger
 
-SCRIPT_DIRECTORY = os.path.realpath(__file__)
+#SCRIPT_DIRECTORY = os.path.realpath(__file__)
 
-data_dir = os.path.join(SCRIPT_DIRECTORY, "../data/aclImdb/")
+data_dir = '/Users/dimitrisbakalis/Desktop/NTUA/10th_Semester/Speech_And_Natural_Language_Processing/lab1/data/aclImdb/' #os.path.join(SCRIPT_DIRECTORY, "../data/aclImdb/")
 train_dir = os.path.join(data_dir, "train")
 test_dir = os.path.join(data_dir, "test")
 pos_train_dir = os.path.join(train_dir, "pos")
@@ -69,30 +74,63 @@ def create_corpus(pos, neg):
     return list(corpus[indices]), list(y[indices])
 
 
-def extract_nbow(corpus):
+def extract_nbow(w2v, corpus):
     """Extract neural bag of words representations"""
-    raise NotImplementedError("Implement nbow extractor")
-
+    nbow_corpus = []
+    for sentence in corpus:
+        vec = np.array(w2v.vector_size*[0.])
+        for cnt, word in enumerate(sentence):
+            try:
+                vec += np.array(w2v[word])
+            except:
+                vec += np.array(w2v.vector_size*[0.])
+        nbow_corpus.append(vec/(cnt+1))
+    return nbow_corpus
 
 def train_sentiment_analysis(train_corpus, train_labels):
     """Train a sentiment analysis classifier using NBOW + Logistic regression"""
-    raise NotImplementedError("Implement sentiment analysis training")
+    lr = LogisticRegression()
+    lr.fit(train_corpus, train_labels)
+    return lr
 
 
 def evaluate_sentiment_analysis(classifier, test_corpus, test_labels):
     """Evaluate classifier in the test corpus and report accuracy"""
-    raise NotImplementedError("Implement sentiment analysis evaluation")
+    preds = classifier.predict(test_corpus)
+    print(classification_report(test_labels, preds))
+    return preds
 
 
 if __name__ == "__main__":
     # TODO: read Imdb corpus
-    corpus, labels = ...
-    nbow_corpus = extract_nbow(corpus)
+    #if sys.argv[1] == '0':
+    #w2v = Word2Vec.load('gutenberg_w2v.100d.model').wv
+    #else:
+    w2v = KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True, limit=NUM_W2V_TO_LOAD)
+    print(0)
+    pos_train = read_samples(pos_train_dir, preprocess=preproc_tok)
+    pos_test = read_samples(pos_test_dir, preprocess=preproc_tok)
+    neg_train = read_samples(neg_train_dir, preprocess=preproc_tok)
+    neg_test = read_samples(neg_test_dir, preprocess=preproc_tok)
+    print(1)
+    pos = pos_train + pos_test
+    neg = neg_train + neg_test
+    print(2)
+    nbow_pos = extract_nbow(w2v, pos)
+    nbow_neg = extract_nbow(w2v, neg)
+    #print(nbow_pos.shape), len(neg))
+    print(3)
+    corpus, labels = create_corpus(nbow_pos, nbow_neg)
+    print(4)
+    #nbow_corpus = extract_nbow(w2v, corpus)
     (
         train_corpus,
         test_corpus,
         train_labels,
         test_labels,
-    ) = sklearn.model_selection.train_test_split(corpus, labels)
-
+    ) = train_test_split(corpus, labels)
+    print(5)
     # TODO: train / evaluate and report accuracy
+    
+    classifier = train_sentiment_analysis(train_corpus, train_labels)
+    predictions = evaluate_sentiment_analysis(classifier, test_corpus, test_labels)
