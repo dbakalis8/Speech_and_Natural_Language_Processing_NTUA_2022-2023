@@ -2,8 +2,6 @@ from collections import Counter
 from util import format_arc, EPS, CHARS
 import subprocess
 
-FINAL_STATE = 100000000
-
 def make_corpus_lexicon():
     with open('data/gutenberg.txt', 'r') as file:
         corpus = file.readlines()
@@ -51,7 +49,7 @@ def mk_transducer():
     for line in lines:
         chars.append(line.split('\t')[0])
 
-    #chars = [EPS, 'a', 'b', 'c', 'd']           #used to simplify the drawing of the transducer
+    #chars = [EPS, 'a', 'b', 'c']           #used to simplify the drawing of the transducer
 
     with open('fsts/L.fst', 'w') as file:
         for char in chars:
@@ -78,7 +76,7 @@ def mk_acceptor():
     for line in lines:
         words.append(line.split('\t')[0])
 
-    #words = words[:10]                           #used to simplify the drawing of the acceptor
+    #words = words[:5]                          #used to simplify the drawing of the acceptor
 
     with open('fsts/V.fst', 'w') as file:
         #file.write(format_arc(0, 1, EPS, EPS))

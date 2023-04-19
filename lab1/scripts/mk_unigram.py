@@ -14,6 +14,8 @@ def mk_unigram():
 
     word_freqs = {word: int(freq)/total_words for word, freq in words}
 
+    #words = words[:4]                          #used to simplify the drawing of the acceptor
+
     with open('fsts/W.fst', 'w') as file:
         weight = calculate_arc_weight(0)
         file.write(format_arc(0, 0, EPS, EPS, weight))

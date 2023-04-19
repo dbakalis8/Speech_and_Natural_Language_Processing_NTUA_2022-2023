@@ -55,10 +55,7 @@ def train_w2v_model(
     """
     workers = multiprocessing.cpu_count()
 
-    # TODO: Instantiate gensim.models.Word2Vec class
     model = Word2Vec(sentences=sentences, size=embedding_dim, window=window, min_count=min_word_count, workers=workers)
-    # TODO: Build model vocabulary using sentences
-    # TODO: Train word2vec model
     model.train(sentences, total_examples=len(sentences), epochs=epochs, callbacks=[W2VLossLogger()])
     # Save trained model
     model.save(output_file)

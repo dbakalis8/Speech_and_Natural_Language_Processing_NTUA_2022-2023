@@ -9,7 +9,7 @@ NUM_W2V_TO_LOAD = 1000000
 #cosine distance taken from https://github.com/slp-ntua/slp-labs/blob/master/lab1/examples/gensim/Genism%20Word2Vec%20Tutorial.ipynb
 def cosine_distance (model, word, target_list , num, flag):
     cosine_dict = {}
-    word_list = [] 
+    word_list = []
     if flag:                                     #if flag is true we receive a word, else we receive a vector.
         a = model[word]
 
@@ -25,7 +25,7 @@ def cosine_distance (model, word, target_list , num, flag):
                 continue
             cos_sim = dot(a, b)/(norm(a)*norm(b))
             cosine_dict[item] = cos_sim
-    dist_sort = sorted(cosine_dict.items(), key=lambda dist: dist[1],reverse = True) ## in Descending order 
+    dist_sort = sorted(cosine_dict.items(), key=lambda dist: dist[1],reverse = True) ## in Descending order
     for item in dist_sort:
         word_list.append((item[0], item[1]))
     return word_list[0:num]
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     with open('vocab/words.syms', 'r') as file:
         lines = file.readlines()
-    
+
     target_list = [line.split()[0] for line in lines]
 
     for word in test_words:
@@ -51,13 +51,15 @@ if __name__ == '__main__':
         print('\n' + 100*'=' + '\n')
 
     test_triplets = [('girl', 'queen', 'king'), ('taller', 'tall', 'good'), ('france', 'paris', 'london')]
-    
+
     for triplet in test_triplets:
         v = w2v[triplet[0]] - w2v[triplet[1]] + w2v[triplet[2]]
         #print(cosine_distance(w2v, v, target_list, 5, flag=False))
-        most_sim = cosine_distance(w2v, v, target_list, 1, flag=False)[0]
+        most_sim = cosine_distance(w2v, v, target_list, 5, flag=False)
         print('Given words', end=' ')
         for word in triplet:
             print(word, end=', ')
-        print('the most similar word is ' + most_sim[0] + ' with cosine similarity ' + str(most_sim[1]))
+        words = [word for (word, sim) in most_sim]
+        sims = [sim for (word, sim) in most_sim]
+        print('the most similar words are ' + str(words) + ' with cosine similarity ' + str(sims))
         print('\n' + 100*'=' + '\n')
