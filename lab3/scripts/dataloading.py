@@ -17,7 +17,7 @@ class SentenceDataset(Dataset):
             processed data-item from our dataset with a given index
     """
 
-    def __init__(self, X, y, word2idx):
+    def __init__(self, X, y, word2idx, max_length):
         """
         In the initialization of the dataset we will have to assign the
         input values to the corresponding class attributes
@@ -37,7 +37,7 @@ class SentenceDataset(Dataset):
         self.data = [word_tokenize(sent.lower()) for sent in X]
         self.labels = y
         self.word2idx = word2idx
-        self.max_length = 50
+        self.max_length = max_length
 
         # EX2
 
@@ -88,18 +88,14 @@ class SentenceDataset(Dataset):
                                     
             example.append(idx)
 
-        #example = [self.word2idx[token]  for token in self.data[index]]
-        length = len(self.data[index])
+        length = len(self.data[index]) if len(self.data[index]) <= self.max_length else self.max_length
         label = self.labels[index]
 
         if len(example) < self.max_length:
-            example.extend((50 - len(example))*[0])
+            example.extend((self.max_length - len(example))*[0])
         else:
-            example = example[:50]
-        
-        #example = torch.stack(example)
-        example = torch.from_numpy(np.array(example))
-        #print(example.shape)
+            example = example[:self.max_length]
 
+        example = torch.from_numpy(np.array(example))
         return example, label, length
 

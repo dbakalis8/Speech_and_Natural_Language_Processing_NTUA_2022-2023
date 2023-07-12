@@ -4,6 +4,9 @@ import sys
 import torch
 import numpy as np
 
+from torch.utils.data import DataLoader, SubsetRandomSampler
+from sklearn.metrics import f1_score, accuracy_score, recall_score
+
 
 def progress(loss, epoch, batch, batch_size, dataset_size):
     """
@@ -37,7 +40,6 @@ def train_dataset(_epoch, dataloader, model, loss_function, optimizer, n_classes
     for index, batch in enumerate(dataloader, 1):
         # get the inputs (batch)
         inputs, labels, lengths = batch
-        #print(batch)
 
         # move the batch tensors to the right device
         inputs, labels, lengths = inputs.to(device), labels.to(device), lengths.to(device)  # EX9
@@ -48,15 +50,18 @@ def train_dataset(_epoch, dataloader, model, loss_function, optimizer, n_classes
         optimizer.zero_grad() # EX9
 
         # Step 2 - forward pass: y' = model(x)
-        logits = model(inputs, lengths)  # EX9
+        if model.__class__.__name__ in ['BaselineDNN', 'LSTM']:
+            logits = model(inputs, lengths)  # EX9
+        else:
+            logits = model(inputs)
 
         # Step 3 - compute loss: L = loss_function(y, y')
 
         if n_classes == 2:
-            logits = torch.squeeze(logits, 1)
-            labels = labels.float()
-
-        loss = loss_function(logits, labels)  # EX9
+            bin_labels = torch.nn.functional.one_hot(labels.long(), num_classes=2).float()
+            loss = loss_function(logits, bin_labels)  # EX9
+        else:
+            loss = loss_function(logits, labels)
 
         # Step 4 - backward pass: compute gradient wrt model parameters
         loss.backward() # EX9
@@ -67,11 +72,11 @@ def train_dataset(_epoch, dataloader, model, loss_function, optimizer, n_classes
         running_loss += loss.data.item()
 
         # print statistics
-        progress(loss=loss.data.item(),
-                 epoch=_epoch,
-                 batch=index,
-                 batch_size=dataloader.batch_size,
-                 dataset_size=len(dataloader.dataset))
+        # progress(loss=running_loss/index, #loss.data.item(),
+        #          epoch=_epoch,
+        #          batch=index,
+        #          batch_size=dataloader.batch_size,
+        #          dataset_size=len(dataloader.dataset))
 
     return running_loss / index
 
@@ -99,24 +104,24 @@ def eval_dataset(dataloader, model, loss_function, n_classes):
             inputs, labels, lengths = inputs.to(device), labels.to(device), lengths.to(device)   # EX9
 
             # Step 2 - forward pass: y' = model(x)
-            logits = model(inputs, lengths)  # EX9
+            if model.__class__.__name__ in ['BaselineDNN', 'LSTM']:
+                logits = model(inputs, lengths)  # EX9
+            else:
+                logits = model(inputs)
 
             # Step 3 - compute loss.
             # We compute the loss only for inspection (compare train/test loss)
             # because we do not actually backpropagate in test time
 
             if n_classes == 2:
-                logits = torch.squeeze(logits, 1)
-                labels = labels.float()
-
-            loss = loss_function(logits, labels)  # EX9 
+                bin_labels = torch.nn.functional.one_hot(labels.long(), num_classes=2).float()
+                loss = loss_function(logits, bin_labels)  # EX9
+            else:
+                loss = loss_function(logits, labels) 
 
             # Step 4 - make predictions (class = argmax of posteriors)
 
-            if n_classes == 2:
-                preds = torch.stack([torch.tensor(1).to(device) if logit > 0 else torch.tensor(0).to(device) for logit in logits]) 
-            else: 
-                preds = torch.max(logits, 1)[1]  # EX9
+            preds = torch.max(logits, 1)[1]  # EX9
 
             # Step 5 - collect the predictions, gold labels and batch loss
 
@@ -126,3 +131,36 @@ def eval_dataset(dataloader, model, loss_function, n_classes):
             running_loss += loss.data.item()
 
     return running_loss / index, (torch.stack(y_pred), torch.stack(y))
+
+def torch_train_val_split(
+    dataset, batch_train, batch_eval, val_size=0.2, shuffle=True, seed=420
+):
+    # Creating data indices for training and validation splits:
+    dataset_size = len(dataset)
+    indices = list(range(dataset_size))
+    val_split = int(np.floor(val_size * dataset_size))
+    if shuffle:
+        np.random.seed(seed)
+        np.random.shuffle(indices)
+    train_indices = indices[val_split:]
+    val_indices = indices[:val_split]
+
+    # Creating PT data samplers and loaders:
+    train_sampler = SubsetRandomSampler(train_indices)
+    val_sampler = SubsetRandomSampler(val_indices)
+
+    train_loader = DataLoader(
+        dataset, batch_size=batch_train, sampler=train_sampler)
+    val_loader = DataLoader(
+        dataset, batch_size=batch_eval, sampler=val_sampler)
+    return train_loader, val_loader
+
+
+def get_metrics_report(y, y_hat):
+    # Convert values to lists
+    y = np.concatenate(y, axis=0)
+    y_hat = np.concatenate(y_hat, axis=0)
+    # report metrics
+    report = f'  accuracy: {accuracy_score(y, y_hat)}\n  recall: ' + \
+        f'{recall_score(y, y_hat, average="macro")}\n  f1-score: {f1_score(y, y_hat,average="macro")}'
+    return report
